@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use app_dirs::{app_root, AppDataType, AppInfo};
 use serde::{Deserialize, Serialize};
 
-pub use crate::conf::google_calendar::*;
 use crate::error::Result;
 
 const APP_INFO: AppInfo = AppInfo {
@@ -23,7 +22,7 @@ pub fn user_cache_path() -> PathBuf {
 
 pub fn default_config_path() -> PathBuf {
     let mut path = user_config_path();
-    path.push("conf.toml");
+    path.push("config.json");
     path
 }
 
@@ -40,10 +39,10 @@ pub struct Conf {
     pub env_path: PathBuf,
     pub up_days: i64,
     pub down_days: i64,
-    pub files: Vec<FileConf>,
     #[cfg(feature = "google_calendar")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub google_calendar: Option<GoogleCalendarGlobalConf>,
+    pub files: Vec<FileConf>,
 }
 
 impl Default for Conf {
@@ -53,8 +52,9 @@ impl Default for Conf {
             env_path: default_env_path(),
             up_days: 7,
             down_days: 7,
-            files: Vec::new(),
+            #[cfg(feature = "google_calendar")]
             google_calendar: None,
+            files: Vec::new(),
         }
     }
 }
@@ -78,32 +78,33 @@ impl Conf {
         let path = path.unwrap_or_else(default_config_path);
 
         let content = fs::read(&path).expect(&format!(
-            "Failed to read fileConf: {}",
+            "Failed to read config file: {}",
             path.as_path().display()
         ));
 
         if cfg!(feature = "dotenv") {
-            let env_conf: EnvConf = toml::from_slice(&content)?;
+            let env_conf: EnvConf = serde_json::from_slice(&content)?;
             if env_conf.env_path.as_path().exists() {
                 dotenv::from_path(env_conf.env_path.as_path())?;
             }
         }
 
-        Ok(toml::from_slice(&content)?)
+        Ok(serde_json::from_slice(&content)?)
     }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct FileConf {
-    pub path: String,
     pub name: Option<String>,
+    pub path: String,
     #[cfg(feature = "google_calendar")]
+    #[serde(rename = "google-calendar")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub google_calendar: Option<GoogleCalendarConf>,
 }
 
 #[cfg(feature = "google_calendar")]
-pub mod google_calendar {
+mod google_calendar {
     use super::*;
 
     #[derive(Serialize, Deserialize)]
@@ -148,3 +149,5 @@ pub mod google_calendar {
         }
     }
 }
+
+pub use google_calendar::{GoogleCalendarConf, GoogleCalendarGlobalConf};

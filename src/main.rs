@@ -1,17 +1,118 @@
+//! Sync your Org with your favorite applications.
+//!
+//! **Note**: This project is still in *alpha stage*. Don't forget to backup
+//! your orgmode files before trying!
+//!
+//! # Commands
+//!
+//! ## `Init`
+//!
+//! // TODO
+//!
+//! ## `Sync`
+//!
+//! // TODO
+//!
+//! ## `Conf`
+//!
+//! // TODO
+//!
+//! # Configuration
+//!
+//! ## General
+//!
+//! ### Global
+//!
+//! ```javascript
+//! {
+//!     // path to dotenv file
+//!     // default is "${UserCacheDir}/orgize-sync/.env"
+//!     "env_path": "./.env",
+//!     // number of days to filter headline before today
+//!     // default is 7
+//!     "up_days": 1,
+//!     // number of days to filter headline after today
+//!     // default is 7
+//!     "down_days": 1
+//! }
+//! ```
+//!
+//! ### Pre-file
+//!
+//! ```javascript
+//! {
+//!     "files": [{
+//!         // specify a name for this file, optional
+//!         "name": "note",
+//!         // path to this orgmode file, required
+//!         "path": "./notes.org"
+//!     }]
+//! }
+//! ```
+//!
+//! ## Google Calendar
+//!
+//! ### Global
+//!
+//! ```javascript
+//! {
+//!     "google-calendar": {
+//!         // google oauth client id, required
+//!         // specifying here or by setting the GOOGLE_CLIENT_ID environment variable
+//!         "client_id": "xxx",
+//!         // google oauth client_secret
+//!         // sepcifying here or by setting the GOOGLE_CLIENT_SECRET environment variable
+//!         "client_secret": "xxx",
+//!         // redirect url after authorizing
+//!         // default is "http://localhost"
+//!         "redirect_uri": "",
+//!         // where to store the access token and refresh token
+//!         // default is "${UserCacheDir}/orgize-sync"
+//!         "token_dir": "",
+//!         // default is "google-token.json"
+//!         "token_filename": ""
+//!     }
+//! }
+//! ```
+//!
+//! ### Pre-file
+//!
+//! ```javascript
+//! {
+//!     "files": [{
+//!         "google-calendar": {
+//!             // which calendar to sync, required
+//!             "calendar": "",
+//!             // whether to append new calendar event to the org mode
+//!             // default is true
+//!             "append_new": false,
+//!             // where to append new calendar event
+//!             // default is "Sync"
+//!             "append_headline": "",
+//!             // which property to store event id
+//!             // default is "EVENT_ID"
+//!             "property": ""
+//!         }
+//!     }]
+//! }
+//! ```
+
 mod conf;
 mod error;
+#[cfg(feature = "google_calendar")]
 mod google;
 
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use toml::to_string_pretty;
 
-use crate::conf::{
-    default_config_path, default_env_path, user_cache_path, user_config_path, Conf, EnvConf,
+use crate::{
+    conf::{
+        default_config_path, default_env_path, user_cache_path, user_config_path, Conf, EnvConf,
+    },
+    error::Result,
+    google::auth::Auth,
 };
-use crate::error::Result;
-use crate::google::auth::Auth;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "orgize-sync")]
@@ -26,8 +127,10 @@ enum Cmd {
     Init,
     #[structopt(name = "sync")]
     Sync {
+        #[cfg(feature = "google_calendar")]
         #[structopt(long = "skip-google-calendar")]
         skip_google_calendar: bool,
+        #[cfg(feature = "toggl")]
         #[structopt(long = "skip-toggl")]
         skip_toggl: bool,
         #[structopt(short = "c", long = "conf", parse(from_os_str))]
@@ -71,7 +174,7 @@ async fn main() -> Result<()> {
                 println!("Creating {} ...", default_config_path.as_path().display());
                 fs::write(
                     default_config_path,
-                    to_string_pretty(&EnvConf {
+                    serde_json::to_string_pretty(&EnvConf {
                         env_path: default_env_path,
                     })?,
                 )?;
@@ -86,7 +189,7 @@ async fn main() -> Result<()> {
 
             if cfg!(feature = "google_calendar") && !skip_google_calendar {
                 if let Some(google_calendar) = conf.google_calendar {
-                    let auth = Auth::new(&google_calendar).await;
+                    let _auth = Auth::new(&google_calendar).await;
                 }
             }
 
@@ -95,7 +198,7 @@ async fn main() -> Result<()> {
         Cmd::Conf { conf_path } => {
             let conf = Conf::new(conf_path)?;
 
-            println!("{}", to_string_pretty(&conf)?);
+            println!("{}", serde_json::to_string_pretty(&conf)?);
         }
     }
 

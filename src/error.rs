@@ -1,13 +1,11 @@
 use app_dirs::AppDirsError;
 use dotenv::Error as EnvError;
-use isahc::http::Error as HttpError;
 use isahc::Error as IsahcError;
+use isahc::http::Error as HttpError;
 use serde_json::Error as JsonError;
 use std::convert::From;
 use std::io::Error as IOError;
-use toml::de::Error as TomlDeError;
-use toml::ser::Error as TomlSerError;
-use url::ParseError;
+use url::ParseError as UrlError;
 
 #[derive(Debug)]
 pub enum Error {
@@ -15,10 +13,8 @@ pub enum Error {
     Env(EnvError),
     Http(IsahcError),
     IO(IOError),
-    TomlDe(TomlDeError),
-    TomlSer(TomlSerError),
     Json(JsonError),
-    Url(ParseError),
+    Url(UrlError),
 }
 
 impl From<AppDirsError> for Error {
@@ -51,26 +47,14 @@ impl From<HttpError> for Error {
     }
 }
 
-impl From<TomlDeError> for Error {
-    fn from(err: TomlDeError) -> Self {
-        Error::TomlDe(err)
-    }
-}
-
-impl From<TomlSerError> for Error {
-    fn from(err: TomlSerError) -> Self {
-        Error::TomlSer(err)
-    }
-}
-
 impl From<JsonError> for Error {
     fn from(err: JsonError) -> Self {
         Error::Json(err)
     }
 }
 
-impl From<ParseError> for Error {
-    fn from(err: ParseError) -> Self {
+impl From<UrlError> for Error {
+    fn from(err: UrlError) -> Self {
         Error::Url(err)
     }
 }
