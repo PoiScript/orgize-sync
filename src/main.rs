@@ -101,7 +101,9 @@ mod conf;
 mod error;
 #[cfg(feature = "google_calendar")]
 mod google;
+mod logger;
 
+use log::LevelFilter;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -110,29 +112,44 @@ use crate::{conf::Conf, error::Result};
 #[derive(StructOpt, Debug)]
 #[structopt(name = "orgize-sync")]
 struct Opt {
-    #[structopt(short, long, parse(from_occurrences))]
-    verbose: u8,
     #[structopt(subcommand)]
     subcommand: Cmd,
 }
 
 #[derive(StructOpt, Debug)]
 enum Cmd {
+    /// Initializes a new configuration file.
     #[structopt(name = "init")]
-    Init,
+    Init {
+        /// Increases verbosity.
+        #[structopt(short, long)]
+        verbose: bool,
+    },
+    /// Synchronizes org files.
     #[structopt(name = "sync")]
     Sync {
+        /// Skips Google Calendar synchronization.
         #[cfg(feature = "google_calendar")]
         #[structopt(long = "skip-google-calendar")]
         skip_google_calendar: bool,
+        /// Skips Toggl synchronization.
         #[cfg(feature = "toggl")]
         #[structopt(long = "skip-toggl")]
         skip_toggl: bool,
+        /// Increases verbosity.
+        #[structopt(short, long)]
+        verbose: bool,
+        /// Path to configuration file.
         #[structopt(short = "c", long = "conf", parse(from_os_str))]
         conf_path: Option<PathBuf>,
     },
+    /// Prints your configuration file.
     #[structopt(name = "conf")]
     Conf {
+        /// Increases verbosity.
+        #[structopt(short, long)]
+        verbose: bool,
+        /// Path to configuration file.
         #[structopt(short = "c", long = "conf", parse(from_os_str))]
         conf_path: Option<PathBuf>,
     },
@@ -142,16 +159,25 @@ fn main() -> Result<()> {
     let opt = Opt::from_args();
 
     match opt.subcommand {
-        Cmd::Init => Conf::init()?,
-        Cmd::Conf { conf_path } => {
+        Cmd::Init { verbose } => {
+            init_logger(verbose);
+
+            Conf::init()?;
+        }
+        Cmd::Conf { verbose, conf_path } => {
+            init_logger(verbose);
+
             let conf = Conf::new(conf_path)?;
             println!("{}", serde_json::to_string_pretty(&conf)?);
         }
         Cmd::Sync {
+            verbose,
             conf_path,
             skip_google_calendar,
             skip_toggl,
         } => {
+            init_logger(verbose);
+
             let _conf = Conf::new(conf_path)?;
 
             if cfg!(feature = "google_calendar") && !skip_google_calendar {}
@@ -161,4 +187,13 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn init_logger(verbose: bool) {
+    log::set_logger(&logger::LOGGER).unwrap();
+    if verbose {
+        log::set_max_level(LevelFilter::Info);
+    } else {
+        log::set_max_level(LevelFilter::Trace);
+    }
 }
