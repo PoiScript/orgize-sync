@@ -39,7 +39,7 @@
 //!     -v, --verbose    Increases verbosity
 //!
 //! OPTIONS:
-//!     -c, --conf <conf-path>    Path to configuration file
+//!     -c, --conf-path <conf-path>    Path to configuration file
 //! ```
 //!
 //! ## `sync`
@@ -58,7 +58,7 @@
 //!     -v, --verbose                 Increases verbosity
 //!
 //! OPTIONS:
-//!     -c, --conf <conf-path>    Path to configuration file
+//!     -c, --conf-path <conf-path>    Path to configuration file
 //! ```
 //!
 //! # Configuration
@@ -80,14 +80,8 @@
 //! ```javascript
 //! {
 //!     // Path to dotenv file.
-//!     // The default is `${UserCacheDir}/orgize-sync/.env`.
-//!     "env_path": "./.env",
-//!     // Number of days to filter headline before today.
-//!     // The default is 7.
-//!     "up_days": 1,
-//!     // Number of days to filter headline after today.
-//!     // The default is 7.
-//!     "down_days": 1
+//!     // The default is "${UserCacheDir}/orgize-sync/.env".
+//!     "env_path": "./.env"
 //! }
 //! ```
 //!
@@ -95,12 +89,14 @@
 //!
 //! ```javascript
 //! {
-//!     "files": [{
-//!         // Specifies the name for this orgmode file. Optional.
-//!         "name": "note",
-//!         // Specifies the path to orgmode file. Required.
-//!         "path": "./notes.org"
-//!     }]
+//!     "files": [
+//!         {
+//!             // Specifies the name for this orgmode file. Optional.
+//!             "name": "note",
+//!             // Specifies the path to orgmode file. Required.
+//!             "path": "./notes.org"
+//!         }
+//!     ]
 //! }
 //! ```
 //!
@@ -110,20 +106,20 @@
 //!
 //! ```javascript
 //! {
-//!     "google-calendar": {
+//!     "google_calendar": {
 //!         // Google OAuth client id. Required.
-//!         // Sepcifying here or by setting the `GOOGLE_CLIENT_ID` environment variable.
+//!         // Sepcifying here or by setting the "GOOGLE_CLIENT_ID" environment variable.
 //!         "client_id": "xxx",
 //!         // Google OAuth client secret. Required.
-//!         // Sepcifying here or by setting the `GOOGLE_CLIENT_SECRET` environment variable.
+//!         // Sepcifying here or by setting the "GOOGLE_CLIENT_SECRET" environment variable.
 //!         "client_secret": "xxx",
 //!         // Redirect url after authorizing.
-//!         // The default is `http://localhost`
+//!         // The default is "http://localhost"
 //!         "redirect_uri": "",
 //!         // Path to store the access token and refresh token.
-//!         // The default is `${UserCacheDir}/orgize-sync`.
+//!         // The default is "${UserCacheDir}/orgize-sync".
 //!         "token_dir": "",
-//!         // The default is `google-token.json`.
+//!         // The default is "google-token.json".
 //!         "token_filename": ""
 //!     }
 //! }
@@ -133,21 +129,29 @@
 //!
 //! ```javascript
 //! {
-//!     "files": [{
-//!         "google-calendar": {
-//!             // Which calendar to sync. Required.
-//!             "calendar": "",
-//!             // Whether to append new calendar event to the org mode.
-//!             // The default is true.
-//!             "append_new": false,
-//!             // Where to append new calendar event.
-//!             // The default is `Sync`.
-//!             "append_headline": "",
-//!             // Which property to store event id.
-//!             // The default is "EVENT_ID`.
-//!             "property": ""
+//!     "files": [
+//!         {
+//!             "google-calendar": {
+//!                 // Which calendar to sync. Required.
+//!                 "calendar": "",
+//!                 // Whether to append new calendar event to the org mode.
+//!                 // The default is true.
+//!                 "append_new": false,
+//!                 // Where to append new calendar event.
+//!                 // The default is "Sync".
+//!                 "append_headline": "New Headline",
+//!                 // Which property to store event id.
+//!                 // The default is "EVENT_ID".
+//!                 "property": "EVENT_ID",
+//!                 // Number of days to filter headline before today.
+//!                 // The default is 7.
+//!                 "up_days": 1,
+//!                 // Number of days to filter headline after today.
+//!                 // The default is 7.
+//!                 "down_days": 1
+//!             }
 //!         }
-//!     }]
+//!     ]
 //! }
 //! ```
 //!
@@ -156,13 +160,32 @@
 //! ### Global
 //!
 //! ```javascript
-//! {}
+//! {
+//!     "toggl": {
+//!         // Toggl Api Token. Required.
+//!         // Sepcifying here or by setting the "TOGGL_API_TOKEN" environment variable.
+//!         "api_token": "xxx"
+//!     }
+//! }
 //! ```
 //!
 //! ### Pre-file
 //!
 //! ```javascript
-//! {}
+//! {
+//!     "files": [
+//!         {
+//!             "toggl": {
+//!                 // Number of days to filter headline before today.
+//!                 // The default is 7.
+//!                 "up_days": 1,
+//!                 // Number of days to filter headline after today.
+//!                 // The default is 7.
+//!                 "down_days": 1
+//!             }
+//!         }
+//!     ]
+//! }
 //! ```
 
 mod conf;
@@ -174,7 +197,9 @@ mod logger;
 mod toggl;
 
 use log::LevelFilter;
+use std::io::stdout;
 use std::path::PathBuf;
+use std::process;
 use structopt::StructOpt;
 
 use crate::{conf::Conf, error::Result};
@@ -210,35 +235,43 @@ enum Cmd {
         #[structopt(short, long)]
         verbose: bool,
         /// Path to configuration file
-        #[structopt(short = "c", long = "conf", parse(from_os_str))]
+        #[structopt(short, long, parse(from_os_str))]
         conf_path: Option<PathBuf>,
     },
-    /// Prints your configuration file
+    /// Validates and prints your configuration file
     #[structopt(name = "conf")]
     Conf {
+        /// Toggles silent mode (no output)
+        #[structopt(short, long)]
+        silent: bool,
         /// Increases verbosity
         #[structopt(short, long)]
         verbose: bool,
         /// Path to configuration file
-        #[structopt(short = "c", long = "conf", parse(from_os_str))]
+        #[structopt(short, long, parse(from_os_str))]
         conf_path: Option<PathBuf>,
     },
 }
 
 fn main() -> Result<()> {
-    let opt = Opt::from_args();
-
-    match opt.subcommand {
+    match Opt::from_args().subcommand {
         Cmd::Init { verbose } => {
             init_logger(verbose);
 
             Conf::init()?;
         }
-        Cmd::Conf { verbose, conf_path } => {
+        Cmd::Conf {
+            silent,
+            verbose,
+            conf_path,
+        } => {
             init_logger(verbose);
 
-            let conf = Conf::new(conf_path)?;
-            println!("{}", serde_json::to_string_pretty(&conf)?);
+            if !silent {
+                serde_json::to_writer_pretty(stdout(), &Conf::new(conf_path)?)?;
+            } else if Conf::new(conf_path).is_err() {
+                process::exit(1);
+            }
         }
         Cmd::Sync {
             verbose,
@@ -262,8 +295,8 @@ fn main() -> Result<()> {
 fn init_logger(verbose: bool) {
     log::set_logger(&logger::LOGGER).unwrap();
     if verbose {
-        log::set_max_level(LevelFilter::Info);
-    } else {
         log::set_max_level(LevelFilter::Trace);
+    } else {
+        log::set_max_level(LevelFilter::Info);
     }
 }

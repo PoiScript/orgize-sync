@@ -41,7 +41,7 @@ FLAGS:
     -v, --verbose    Increases verbosity
 
 OPTIONS:
-    -c, --conf <conf-path>    Path to configuration file
+    -c, --conf-path <conf-path>    Path to configuration file
 ```
 
 ### `sync`
@@ -60,7 +60,7 @@ FLAGS:
     -v, --verbose                 Increases verbosity
 
 OPTIONS:
-    -c, --conf <conf-path>    Path to configuration file
+    -c, --conf-path <conf-path>    Path to configuration file
 ```
 
 ## Configuration
@@ -82,14 +82,8 @@ OPTIONS:
 ```javascript
 {
     // Path to dotenv file.
-    // The default is `${UserCacheDir}/orgize-sync/.env`.
-    "env_path": "./.env",
-    // Number of days to filter headline before today.
-    // The default is 7.
-    "up_days": 1,
-    // Number of days to filter headline after today.
-    // The default is 7.
-    "down_days": 1
+    // The default is "${UserCacheDir}/orgize-sync/.env".
+    "env_path": "./.env"
 }
 ```
 
@@ -97,12 +91,14 @@ OPTIONS:
 
 ```javascript
 {
-    "files": [{
-        // Specifies the name for this orgmode file. Optional.
-        "name": "note",
-        // Specifies the path to orgmode file. Required.
-        "path": "./notes.org"
-    }]
+    "files": [
+        {
+            // Specifies the name for this orgmode file. Optional.
+            "name": "note",
+            // Specifies the path to orgmode file. Required.
+            "path": "./notes.org"
+        }
+    ]
 }
 ```
 
@@ -112,20 +108,20 @@ OPTIONS:
 
 ```javascript
 {
-    "google-calendar": {
+    "google_calendar": {
         // Google OAuth client id. Required.
-        // Sepcifying here or by setting the `GOOGLE_CLIENT_ID` environment variable.
+        // Sepcifying here or by setting the "GOOGLE_CLIENT_ID" environment variable.
         "client_id": "xxx",
         // Google OAuth client secret. Required.
-        // Sepcifying here or by setting the `GOOGLE_CLIENT_SECRET` environment variable.
+        // Sepcifying here or by setting the "GOOGLE_CLIENT_SECRET" environment variable.
         "client_secret": "xxx",
         // Redirect url after authorizing.
-        // The default is `http://localhost`
+        // The default is "http://localhost"
         "redirect_uri": "",
         // Path to store the access token and refresh token.
-        // The default is `${UserCacheDir}/orgize-sync`.
+        // The default is "${UserCacheDir}/orgize-sync".
         "token_dir": "",
-        // The default is `google-token.json`.
+        // The default is "google-token.json".
         "token_filename": ""
     }
 }
@@ -135,21 +131,29 @@ OPTIONS:
 
 ```javascript
 {
-    "files": [{
-        "google-calendar": {
-            // Which calendar to sync. Required.
-            "calendar": "",
-            // Whether to append new calendar event to the org mode.
-            // The default is true.
-            "append_new": false,
-            // Where to append new calendar event.
-            // The default is `Sync`.
-            "append_headline": "",
-            // Which property to store event id.
-            // The default is "EVENT_ID`.
-            "property": ""
+    "files": [
+        {
+            "google-calendar": {
+                // Which calendar to sync. Required.
+                "calendar": "",
+                // Whether to append new calendar event to the org mode.
+                // The default is true.
+                "append_new": false,
+                // Where to append new calendar event.
+                // The default is "Sync".
+                "append_headline": "New Headline",
+                // Which property to store event id.
+                // The default is "EVENT_ID".
+                "property": "EVENT_ID",
+                // Number of days to filter headline before today.
+                // The default is 7.
+                "up_days": 1,
+                // Number of days to filter headline after today.
+                // The default is 7.
+                "down_days": 1
+            }
         }
-    }]
+    ]
 }
 ```
 
@@ -158,13 +162,32 @@ OPTIONS:
 #### Global
 
 ```javascript
-{}
+{
+    "toggl": {
+        // Toggl Api Token. Required.
+        // Sepcifying here or by setting the "TOGGL_API_TOKEN" environment variable.
+        "api_token": "xxx"
+    }
+}
 ```
 
 #### Pre-file
 
 ```javascript
-{}
+{
+    "files": [
+        {
+            "toggl": {
+                // Number of days to filter headline before today.
+                // The default is 7.
+                "up_days": 1,
+                // Number of days to filter headline after today.
+                // The default is 7.
+                "down_days": 1
+            }
+        }
+    ]
+}
 ```
 
 ## License
