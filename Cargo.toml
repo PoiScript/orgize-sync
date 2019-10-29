@@ -3,7 +3,7 @@ name = "orgize-sync"
 version = "0.1.0"
 authors = ["PoiScript <poiscript@gmail.com>"]
 description = "Sync your Org with your favorite applications."
-repository = "https://github.com/PoiScript/orgize"
+repository = "https://github.com/PoiScript/orgize-sync"
 readme = "README.md"
 edition = "2018"
 license = "MIT"
@@ -30,4 +30,3 @@ orgize = { version = "0.5.0", default-features = false, features = ["chrono"] }
 serde = { version = "1.0.100", features = ["derive"] }
 serde_json = "1.0.40"
 structopt = "0.3.1"
-url = "2.1.0"

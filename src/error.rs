@@ -6,7 +6,6 @@ use isahc::Error as IsahcError;
 use serde_json::Error as JsonError;
 use std::convert::From;
 use std::io::Error as IOError;
-use url::ParseError as UrlError;
 
 #[derive(Debug)]
 pub enum Error {
@@ -16,7 +15,6 @@ pub enum Error {
     Http(IsahcError),
     IO(IOError),
     Json(JsonError),
-    Url(UrlError),
 }
 
 impl From<AppDirsError> for Error {
@@ -58,12 +56,6 @@ impl From<HttpError> for Error {
 impl From<JsonError> for Error {
     fn from(err: JsonError) -> Self {
         Error::Json(err)
-    }
-}
-
-impl From<UrlError> for Error {
-    fn from(err: UrlError) -> Self {
-        Error::Url(err)
     }
 }
 

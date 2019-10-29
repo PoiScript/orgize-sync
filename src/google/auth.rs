@@ -1,54 +1,55 @@
-use chrono::{DateTime, Duration, Utc};
-use colored::Colorize;
-use isahc::prelude::{Request, RequestExt, ResponseExt};
-use serde::{Deserialize, Serialize};
+use log::{debug, info, trace};
 use std::fs;
 use std::io::{stdin, BufRead};
-use std::path::PathBuf;
-use url::Url;
+use std::process;
 
-use crate::conf::GoogleCalendarGlobalConf;
-use crate::error::Result;
+use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    conf::GoogleCalendarGlobalConf,
+    error::Result,
+    google::api::{confirm_code, refresh_token},
+};
 
 #[derive(Serialize, Deserialize)]
-pub struct Auth {
+struct OAuthToken {
     access_token: String,
     expires_at: DateTime<Utc>,
     refresh_token: String,
 }
 
-impl Auth {
-    pub async fn new(conf: &GoogleCalendarGlobalConf) -> Result<Self> {
-        let mut path = conf.token_dir.clone();
-        path.push(&conf.token_filename);
-        if let Ok(json) = fs::read_to_string(path) {
-            Ok(serde_json::from_str(&json)?)
+pub async fn access_token(conf: &GoogleCalendarGlobalConf) -> Result<String> {
+    let token_path = conf.token_dir.clone().join(&conf.token_filename);
+
+    debug!("Google OAuth token path: {}", token_path.display());
+
+    if let Ok(json) = fs::read_to_string(&token_path) {
+        let mut auth: OAuthToken = serde_json::from_str(&json)?;
+
+        if auth.expires_at > Utc::now() {
+            Ok(auth.access_token)
         } else {
-            Auth::sign_in(conf).await
+            info!("Google OAuth token expired. Refreshing.");
+
+            let res = refresh_token(&auth.refresh_token, conf).await?;
+            auth.access_token = res.access_token;
+            auth.expires_at = Utc::now() + Duration::seconds(res.expires_in);
+
+            trace!("Saving Google OAuth token.");
+
+            fs::write(token_path, serde_json::to_string(&auth)?)?;
+
+            Ok(auth.access_token)
         }
-    }
-
-    pub fn save(&self, conf: &GoogleCalendarGlobalConf) -> Result<()> {
-        let mut path = conf.token_dir.clone();
-        path.push(&conf.token_filename);
-        fs::write(path, serde_json::to_string(&self)?)?;
-        Ok(())
-    }
-
-    async fn sign_in(config: &GoogleCalendarGlobalConf) -> Result<Self> {
-        let url = Url::parse_with_params(
-            "https://accounts.google.com/o/oauth2/v2/auth",
-            &[
-                ("client_id", &*config.client_id),
-                ("response_type", "code"),
-                ("access_type", "offline"),
-                ("redirect_uri", &*config.redirect_uri),
-                ("scope", "https://www.googleapis.com/auth/calendar"),
-            ],
-        )?;
-
-        println!("Visit: {}", url.as_str().underline());
-        println!("Follow the instructions and paste the code here:");
+    } else {
+        info!(
+            "Please visit: https://accounts.google.com/o/oauth2/v2/auth\
+             ?client_id={}&redirect_uri={}&scope=https://www.googleapis.com/auth/calendar\
+             &response_type=code&access_type=offline",
+            conf.client_id, conf.redirect_uri,
+        );
+        info!("Follow the instructions and paste the code here (press q to quit):");
 
         for line in stdin().lock().lines() {
             let line = line?;
@@ -57,81 +58,25 @@ impl Auth {
             if code.is_empty() {
                 continue;
             } else if code == "q" {
-                panic!()
+                process::exit(1);
             }
 
-            let mut response = Request::post("https://www.googleapis.com/oauth2/v4/token")
-                .header("content-type", "application/x-www-form-urlencoded")
-                .body(format!(
-                    "code={}&client_id={}&client_secret={}&grant_type={}&redirect_uri={}",
-                    &code,
-                    &config.client_id,
-                    &config.client_secret,
-                    "authorization_code",
-                    "http://localhost"
-                ))?
-                .send_async()
-                .await?;
+            info!("Confirming code.");
 
-            if response.status().is_success() {
-                #[derive(Deserialize)]
-                struct ConfirmCodeResponse {
-                    access_token: String,
-                    expires_in: i64,
-                    refresh_token: String,
-                }
+            let res = confirm_code(code, conf).await?;
 
-                let json = response.json::<ConfirmCodeResponse>()?;
+            let auth = OAuthToken {
+                access_token: res.access_token,
+                expires_at: Utc::now() + Duration::seconds(res.expires_in),
+                refresh_token: res.refresh_token,
+            };
 
-                println!("Logging in successfully.");
+            trace!("Saving Google OAuth token.");
 
-                let auth = Auth {
-                    access_token: json.access_token,
-                    expires_at: Utc::now() + Duration::seconds(json.expires_in),
-                    refresh_token: json.refresh_token,
-                };
+            fs::write(token_path, serde_json::to_string(&auth)?)?;
 
-                auth.save(config)?;
-
-                return Ok(auth);
-            } else {
-                panic!("Failed to authorize.");
-            }
+            return Ok(auth.access_token);
         }
-
-        panic!("Failed to authorize.");
-    }
-
-    pub async fn refresh(&mut self, config: &GoogleCalendarGlobalConf) -> Result<()> {
-        let mut response = Request::post("https://www.googleapis.com/oauth2/v4/token")
-            .header("content-type", "application/x-www-form-urlencoded")
-            .body(format!(
-                "client_id={}&client_secret={}&refresh_token={}&grant_type={}",
-                &config.client_id, &config.client_secret, self.refresh_token, "refresh_token",
-            ))?
-            .send_async()
-            .await?;
-
-        if response.status().is_success() {
-            #[derive(Deserialize)]
-            struct RefreshTokenResponse {
-                access_token: String,
-                expires_in: i64,
-            }
-
-            let json = response.json::<RefreshTokenResponse>()?;
-
-            self.access_token = json.access_token;
-            self.expires_at = Utc::now() + Duration::seconds(json.expires_in);
-            self.save(config)?;
-        } else {
-            panic!("");
-        }
-
-        Ok(())
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.expires_at > Utc::now()
+        process::exit(1);
     }
 }
