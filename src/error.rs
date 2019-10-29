@@ -1,7 +1,8 @@
 use app_dirs::AppDirsError;
+use chrono::ParseError as ChronoError;
 use dotenv::Error as EnvError;
-use isahc::Error as IsahcError;
 use isahc::http::Error as HttpError;
+use isahc::Error as IsahcError;
 use serde_json::Error as JsonError;
 use std::convert::From;
 use std::io::Error as IOError;
@@ -10,6 +11,7 @@ use url::ParseError as UrlError;
 #[derive(Debug)]
 pub enum Error {
     AppDirs(AppDirsError),
+    Chrono(ChronoError),
     Env(EnvError),
     Http(IsahcError),
     IO(IOError),
@@ -20,6 +22,12 @@ pub enum Error {
 impl From<AppDirsError> for Error {
     fn from(err: AppDirsError) -> Self {
         Error::AppDirs(err)
+    }
+}
+
+impl From<ChronoError> for Error {
+    fn from(err: ChronoError) -> Self {
+        Error::Chrono(err)
     }
 }
 

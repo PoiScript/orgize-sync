@@ -1,6 +1,4 @@
-use std::env;
-use std::fs;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use app_dirs::{app_root, AppDataType, AppInfo};
 use serde::{Deserialize, Serialize};
@@ -12,7 +10,7 @@ const APP_INFO: AppInfo = AppInfo {
     author: "PoiScript",
 };
 
-pub fn user_config_path() -> PathBuf {
+pub fn user_conf_path() -> PathBuf {
     app_root(AppDataType::UserConfig, &APP_INFO).unwrap()
 }
 
@@ -20,16 +18,12 @@ pub fn user_cache_path() -> PathBuf {
     app_root(AppDataType::UserCache, &APP_INFO).unwrap()
 }
 
-pub fn default_config_path() -> PathBuf {
-    let mut path = user_config_path();
-    path.push("config.json");
-    path
+pub fn default_conf_path() -> PathBuf {
+    user_conf_path().join("config.json")
 }
 
 pub fn default_env_path() -> PathBuf {
-    let mut path = user_cache_path();
-    path.push(".env");
-    path
+    user_cache_path().join(".env")
 }
 
 #[derive(Serialize, Deserialize)]
@@ -74,12 +68,51 @@ impl Default for EnvConf {
 }
 
 impl Conf {
-    pub fn new(path: Option<PathBuf>) -> Result<Self> {
-        let path = path.unwrap_or_else(default_config_path);
+    pub fn init() -> Result<()> {
+        fs::create_dir_all(user_conf_path())?;
+        fs::create_dir_all(user_cache_path())?;
 
-        let content = fs::read(&path).expect(&format!(
+        let conf_path = default_conf_path();
+        let env_path = default_env_path();
+
+        if cfg!(feature = "dotenv") {
+            if env_path.as_path().exists() {
+                println!(
+                    "{} already existed, skipping ...",
+                    env_path.as_path().display()
+                );
+            } else {
+                println!("Creating {} ...", env_path.as_path().display());
+                fs::write(&env_path, "")?;
+            }
+        }
+
+        if conf_path.as_path().exists() {
+            println!(
+                "{} already existed, skipping ...",
+                conf_path.as_path().display()
+            );
+        } else {
+            println!("Creating {} ...", conf_path.as_path().display());
+            if cfg!(feature = "dotenv") {
+                fs::write(
+                    conf_path,
+                    serde_json::to_string_pretty(&EnvConf { env_path })?,
+                )?;
+            } else {
+                fs::write(conf_path, "")?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn new(path: Option<PathBuf>) -> Result<Self> {
+        let conf_path = path.unwrap_or_else(default_conf_path);
+
+        let content = fs::read(&conf_path).expect(&format!(
             "Failed to read config file: {}",
-            path.as_path().display()
+            conf_path.as_path().display()
         ));
 
         if cfg!(feature = "dotenv") {
@@ -105,7 +138,10 @@ pub struct FileConf {
 
 #[cfg(feature = "google_calendar")]
 mod google_calendar {
-    use super::*;
+    use serde::{Deserialize, Serialize};
+    use std::{env, path::PathBuf};
+
+    use super::user_cache_path;
 
     #[derive(Serialize, Deserialize)]
     #[serde(default)]
@@ -150,4 +186,5 @@ mod google_calendar {
     }
 }
 
+#[cfg(feature = "google_calendar")]
 pub use google_calendar::{GoogleCalendarConf, GoogleCalendarGlobalConf};
