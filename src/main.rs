@@ -170,6 +170,8 @@ mod error;
 #[cfg(feature = "google_calendar")]
 mod google;
 mod logger;
+#[cfg(feature = "toggl")]
+mod toggl;
 
 use log::LevelFilter;
 use std::path::PathBuf;
