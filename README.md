@@ -2,24 +2,78 @@
 
 Sync your Org with your favorite applications.
 
-**Note**: This project is still in *alpha stage*. Don't forget to backup
-your orgmode files before trying!
+> This project is still in *alpha stage*. Don't forget to backup your
+> orgmode files before trying!
 
-## Commands
+## Installation
 
-### `Init`
+```
+$ cargo install orgize-sync
+```
 
-// TODO
+## Subcommand
 
-### `Sync`
+### `init`
 
-// TODO
+Initializes a new configuration file
 
-### `Conf`
+```
+USAGE:
+    orgize-sync init [FLAGS]
 
-// TODO
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+    -v, --verbose    Increases verbosity
+```
+
+### `conf`
+
+Prints your configuration file
+
+```
+USAGE:
+    orgize-sync conf [FLAGS] [OPTIONS]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+    -v, --verbose    Increases verbosity
+
+OPTIONS:
+    -c, --conf <conf-path>    Path to configuration file
+```
+
+### `sync`
+
+Synchronizes org files
+
+```
+USAGE:
+    orgize-sync sync [FLAGS] [OPTIONS]
+
+FLAGS:
+    -h, --help                    Prints help information
+        --skip-google-calendar    Skips Google Calendar synchronization
+        --skip-toggl              Skips Toggl synchronization
+    -V, --version                 Prints version information
+    -v, --verbose                 Increases verbosity
+
+OPTIONS:
+    -c, --conf <conf-path>    Path to configuration file
+```
 
 ## Configuration
+
++ [General](#general)
+  + [Global](#global)
+  + [Pre-file](#pre-file)
++ [Google Calendar](#google-calendar)
+  + [Global](#global-1)
+  + [Pre-file](#pre-file-1)
++ [Toggl](#toggl)
+  + [Global](#global-2)
+  + [Pre-file](#pre-file-2)
 
 ### General
 
@@ -27,14 +81,14 @@ your orgmode files before trying!
 
 ```javascript
 {
-    // path to dotenv file
-    // default is "${UserCacheDir}/orgize-sync/.env"
+    // Path to dotenv file.
+    // The default is `${UserCacheDir}/orgize-sync/.env`.
     "env_path": "./.env",
-    // number of days to filter headline before today
-    // default is 7
+    // Number of days to filter headline before today.
+    // The default is 7.
     "up_days": 1,
-    // number of days to filter headline after today
-    // default is 7
+    // Number of days to filter headline after today.
+    // The default is 7.
     "down_days": 1
 }
 ```
@@ -44,9 +98,9 @@ your orgmode files before trying!
 ```javascript
 {
     "files": [{
-        // specify a name for this file, optional
+        // Specifies the name for this orgmode file. Optional.
         "name": "note",
-        // path to this orgmode file, required
+        // Specifies the path to orgmode file. Required.
         "path": "./notes.org"
     }]
 }
@@ -59,19 +113,19 @@ your orgmode files before trying!
 ```javascript
 {
     "google-calendar": {
-        // google oauth client id, required
-        // specifying here or by setting the GOOGLE_CLIENT_ID environment variable
+        // Google OAuth client id. Required.
+        // Sepcifying here or by setting the `GOOGLE_CLIENT_ID` environment variable.
         "client_id": "xxx",
-        // google oauth client_secret
-        // sepcifying here or by setting the GOOGLE_CLIENT_SECRET environment variable
+        // Google OAuth client secret. Required.
+        // Sepcifying here or by setting the `GOOGLE_CLIENT_SECRET` environment variable.
         "client_secret": "xxx",
-        // redirect url after authorizing
-        // default is "http://localhost"
+        // Redirect url after authorizing.
+        // The default is `http://localhost`
         "redirect_uri": "",
-        // where to store the access token and refresh token
-        // default is "${UserCacheDir}/orgize-sync"
+        // Path to store the access token and refresh token.
+        // The default is `${UserCacheDir}/orgize-sync`.
         "token_dir": "",
-        // default is "google-token.json"
+        // The default is `google-token.json`.
         "token_filename": ""
     }
 }
@@ -83,20 +137,34 @@ your orgmode files before trying!
 {
     "files": [{
         "google-calendar": {
-            // which calendar to sync, required
+            // Which calendar to sync. Required.
             "calendar": "",
-            // whether to append new calendar event to the org mode
-            // default is true
+            // Whether to append new calendar event to the org mode.
+            // The default is true.
             "append_new": false,
-            // where to append new calendar event
-            // default is "Sync"
+            // Where to append new calendar event.
+            // The default is `Sync`.
             "append_headline": "",
-            // which property to store event id
-            // default is "EVENT_ID"
+            // Which property to store event id.
+            // The default is "EVENT_ID`.
             "property": ""
         }
     }]
 }
+```
+
+### Toggl
+
+#### Global
+
+```javascript
+{}
+```
+
+#### Pre-file
+
+```javascript
+{}
 ```
 
 ## License
