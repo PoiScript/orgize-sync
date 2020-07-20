@@ -22,7 +22,7 @@ app_dirs = "1.2.1"
 async-std = "1.0.1"
 chrono = { version = "0.4.9", features = ["serde"] }
 chrono-tz = { version = "0.5", optional = true }
-colored = "1.8.0"
+colored = "2.0.0"
 dotenv = { version = "0.15.0", optional = true }
 isahc = { version = "0.8.1", default-features = false, features = ["json"] }
 log = "0.4.8"
