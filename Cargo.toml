@@ -18,7 +18,7 @@ google_calendar = ["chrono-tz"]
 toggl = []
 
 [dependencies]
-app_dirs = "1.2.1"
+app_dirs = "2.0.1"
 async-std = "1.0.1"
 chrono = { version = "0.4.9", features = ["serde"] }
 chrono-tz = { version = "0.5", optional = true }
